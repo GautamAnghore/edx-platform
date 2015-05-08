@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.utils.translation import ugettext_noop
+
 from student.models import CourseEnrollment
 
 from xmodule.modulestore.django import modulestore
@@ -92,7 +93,7 @@ class Role(models.Model):
            (not course.forum_posts_allowed):
             return False
 
-        return self.permissions.filter(name=permission).exists()
+        return self.permissions.filter(name=permission).exists()  # pylint: disable=no-member
 
 
 class Permission(models.Model):
@@ -105,3 +106,29 @@ class Permission(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+def all_permissions_for_user_in_course(user, course_id):  # pylint: disable=invalid-name
+    """Returns all the permissions the user has in the given course."""
+    course = modulestore().get_course(course_id)
+    if course is None:
+        raise ItemNotFoundError(course_id)
+    course_blacked_out = not course.forum_posts_allowed
+
+    all_roles = {role.name for role in Role.objects.filter(users=user, course_id=course_id)}
+
+    def permission_blacked_out(p_name):
+        """Returns true if the given permission is blacked out"""
+        return (
+            course_blacked_out and
+            all_roles == {FORUM_ROLE_STUDENT} and
+            (p_name.startswith('edit') or p_name.startswith('update') or p_name.startswith('create'))
+        )
+
+    permissions = {
+        permission.name
+        for permission
+        in Permission.objects.filter(roles__users=user, roles__course_id=course_id)
+        if not permission_blacked_out(permission.name)
+    }
+    return permissions
