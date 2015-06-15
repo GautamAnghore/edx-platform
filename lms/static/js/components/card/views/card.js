@@ -27,7 +27,7 @@
                 },
 
                 switchOnConfiguration: function (square_result, list_result) {
-                    return (this.callIfFunction(this.configuration) || 'square_card') === 'square_card' ?
+                    return this.callIfFunction(this.configuration) === 'square_card' ?
                         square_result : list_result;
                 },
 
@@ -37,6 +37,13 @@
                     } else {
                         return value;
                     }
+                },
+
+                constructor: function (options) {
+                    if (!this.configuration)  {
+                        this.configuration = (options && options.configuration) ? options.configuration : 'square_card';
+                    }
+                    Backbone.View.prototype.constructor.apply(this, arguments);
                 },
 
                 initialize: function () {
@@ -53,10 +60,6 @@
                         ' ' + this.callIfFunction(this.cardClass);
                 },
 
-                configuration: function () {
-                    return this.options.configuration;
-                },
-
                 render: function () {
                     this.$el.html(this.template({
                         title: this.callIfFunction(this.title),
@@ -67,7 +70,8 @@
                     }));
                     var detailsEl = this.$el.find('.card-meta-details');
                     _.each(this.callIfFunction(this.details), function (detail) {
-                        detail.render();
+                        // Call setElement to rebind event handlers
+                        detail.setElement(detail.el).render();
                         detail.$el.addClass('meta-detail');
                         detailsEl.append(detail.el);
                     });

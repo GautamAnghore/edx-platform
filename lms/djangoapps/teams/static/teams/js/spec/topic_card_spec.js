@@ -22,6 +22,7 @@
                 });
 
                 it('can render itself', function () {
+                    expect(view.$el).toHaveClass('square-card');
                     expect(view.$el.find('.card-title').text()).toContain('Renewable Energy');
                     expect(view.$el.find('.card-description').text()).toContain('changes in renewable energy');
                     expect(view.$el.find('.card-meta-details').text()).toContain('34 Teams');
