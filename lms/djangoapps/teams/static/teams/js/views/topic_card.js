@@ -1,5 +1,5 @@
 /**
- * View for a topic card. Displays a TopicCardModel.
+ * View for a topic card. Displays a Topic.
  */
 ;(function (define) {
     'use strict';
@@ -13,6 +13,7 @@
 
                 action: function (event) {
                     event.preventDefault();
+                    // TODO implement actual navigation
                     console.log("Navigating to topic " + this.model.get('id'));
                 },
 

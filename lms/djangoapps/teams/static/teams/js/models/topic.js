@@ -1,10 +1,10 @@
 /**
- * Model for a topic card.
+ * Model for a topic.
  */
 (function (define) {
     'use strict';
     define(['backbone'], function (Backbone) {
-        var TopicCardModel = Backbone.Model.extend({
+        var Topic = Backbone.Model.extend({
             defaults: {
                 name: '',
                 description: '',
@@ -12,6 +12,6 @@
                 id: ''
             }
         });
-        return TopicCardModel;
+        return Topic;
     })
 }).call(this, define || RequireJS.define);
