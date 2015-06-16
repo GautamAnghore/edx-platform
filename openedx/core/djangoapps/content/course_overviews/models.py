@@ -48,7 +48,7 @@ class CourseOverview(django.db.models.Model):
     # Certification data
     certificates_display_behavior = TextField(null=True)
     certificates_show_before_end = BooleanField()
-    has_active_web_certificates = BooleanField()
+    has_any_active_web_certificate = BooleanField()
     cert_name_short = TextField()
     cert_name_long = TextField()
 
@@ -91,7 +91,7 @@ class CourseOverview(django.db.models.Model):
 
             certificates_display_behavior=course.certificates_display_behavior,
             certificates_show_before_end=course.certificates_show_before_end,
-            has_active_web_certificates=(get_active_web_certificate(course) is not None),
+            has_any_active_web_certificate=(get_active_web_certificate(course) is not None),
             cert_name_short=course.cert_name_short,
             cert_name_long=course.cert_name_long,
             lowest_passing_grade=course.lowest_passing_grade,
@@ -120,13 +120,17 @@ class CourseOverview(django.db.models.Model):
         """
         course_overview = None
         try:
+            print 'loading ' + str(course_id) + ' from cache...'
             course_overview = CourseOverview.objects.get(id=course_id)
+            print 'cache hit'
             # Cache hit! Just return the overview
         except CourseOverview.DoesNotExist:
+            print 'cache miss'
             # Cache miss. Load entire course and create a CourseOverview from it
             course = modulestore().get_course(course_id)
             if course:
                 course_overview = CourseOverview._create_from_course(course)
+                print 'made course overview. var=' + str(course_overview.mobile_available)
                 course_overview.save()  # Save new overview to the cache
         return course_overview
 
@@ -136,7 +140,7 @@ class CourseOverview(django.db.models.Model):
 
         Example return value: CourseOverview(location=course-v1://edX+DemoX.1+2014)
         """
-        return "{}(location={})".format(self.__class__.__name__, self.location)
+        return "{}(id={})".format(self.__class__.__name__, self.id)
 
     def __str__(self):
         """

@@ -120,25 +120,33 @@ def get_course_start_datetime_text(start, advertised_start, format_string, ugett
         ugettext (str -> str): a text localization function
         strftime (datetime, str -> str): a localized string formatting function
     """
-    if isinstance(advertised_start, basestring):
+    _ = ugettext
+
+    def try_parse_iso_8601(text):
         try:
-            date_to_display = Date().from_json(advertised_start)
+            result = Date().from_json(text)
+            if result is None:
+                result = text.title()
+            else:
+                result = strftime(result, format_string)
+                if format_string == "DATE_TIME":
+                    result = _add_timezone_string(result)
         except ValueError:
-            date_to_display = None
-    elif not is_course_start_date_still_default(start, advertised_start):
-        date_to_display = advertised_start or start
-    else:
+            result = text.title()
+
+        return result
+
+    if isinstance(advertised_start, basestring):
+        return try_parse_iso_8601(advertised_start)
+    elif is_course_start_date_still_default(start, advertised_start):
         # Translators: TBD stands for 'To Be Determined' and is used when a course
         # does not yet have an announced start date.
-        _ = ugettext
         return _('TBD')
-
-    if date_to_display:
-        result = strftime(date_to_display, format_string)
-        return _add_timezone_string(result) if format_string == "DATE_TIME" \
-            else result
     else:
-        return advertised_start.title()
+        when = advertised_start or start
+        if format_string == "DATE_TIME":
+            return _add_timezone_string(strftime(when, format_string))
+        return strftime(when, format_string)
 
 
 def get_course_end_datetime_text(end, format_string, strftime_localized):
