@@ -13,6 +13,7 @@ from xmodule.tests.test_util_open_ended import DummyModulestore
 from xmodule.open_ended_grading_classes.peer_grading_service import MockPeerGradingService
 from xmodule.peer_grading_module import PeerGradingModule, PeerGradingDescriptor, MAX_ALLOWED_FEEDBACK_LENGTH
 from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
+from xmodule.validation import StudioValidationMessage
 
 log = logging.getLogger(__name__)
 
@@ -230,6 +231,22 @@ class PeerGradingModuleTest(unittest.TestCase, DummyModulestore):
 
             # Returning score dict.
             return self.peer_grading.get_score()
+
+    def test_deprecation_message(self):
+        """
+        Test the validation message produced for deprecation.
+        """
+        peer_grading_module = self.peer_grading
+
+        validation = peer_grading_module.validate()
+        self.assertEqual(len(validation.messages), 0)
+
+        self.assertEqual(
+            validation.summary.text,
+            u"ORA 1 has been deprecated and removed from edX. Please delete "
+            u"this component and replace with an ORA 2 component."
+        )
+        self.assertEqual(validation.summary.type, StudioValidationMessage.ERROR)
 
 
 class MockPeerGradingServiceProblemList(MockPeerGradingService):

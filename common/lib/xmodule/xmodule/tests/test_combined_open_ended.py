@@ -25,7 +25,9 @@ from xmodule.combined_open_ended_module import CombinedOpenEndedModule
 from opaque_keys.edx.locations import Location
 from xmodule.tests import get_test_system, test_util_open_ended
 from xmodule.progress import Progress
+from xmodule.validation import StudioValidationMessage
 from xmodule.x_module import STUDENT_VIEW
+
 from xmodule.tests.test_util_open_ended import (
     DummyModulestore, TEST_STATE_SA_IN,
     MOCK_INSTANCE_STATE, TEST_STATE_SA, TEST_STATE_AI, TEST_STATE_AI2, TEST_STATE_AI2_INVALID,
@@ -794,6 +796,20 @@ class CombinedOpenEndedModuleTest(unittest.TestCase):
 
     def test_state_pe_single(self):
         self.ai_state_success(TEST_STATE_PE_SINGLE, iscore=0, tasks=[self.task_xml2])
+
+    def test_deprecation_message(self):
+        """
+        Test the validation message produced for deprecation.
+        """
+        validation = self.combinedoe.validate()
+        self.assertEqual(len(validation.messages), 0)
+
+        self.assertEqual(
+            validation.summary.text,
+            u"ORA 1 has been deprecated and removed from edX. Please delete "
+            u"this component and replace with an ORA 2 component."
+        )
+        self.assertEqual(validation.summary.type, StudioValidationMessage.ERROR)
 
 
 class CombinedOpenEndedModuleConsistencyTest(unittest.TestCase):
