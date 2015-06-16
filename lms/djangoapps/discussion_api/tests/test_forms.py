@@ -7,7 +7,6 @@ from urllib import urlencode
 
 import ddt
 
-from django.core.exceptions import ValidationError
 from django.http import QueryDict
 
 from opaque_keys.edx.locator import CourseLocator
