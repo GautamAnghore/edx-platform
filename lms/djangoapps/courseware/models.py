@@ -22,17 +22,13 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from xmodule_django.models import CourseKeyField, LocationKeyField, BlockTypeKeyField  # pylint: disable=import-error
-from openedx.core.djangoapps.call_stack_manager import CallStackManager, CallStackMixin
 log = logging.getLogger(__name__)
 
 
-class StudentModule(CallStackMixin, models.Model):
+class StudentModule(models.Model):
     """
     Keeps student state for a particular module in a particular course.
     """
-    # For call stack overriding in call stacks
-    objects = CallStackManager()
-
     MODEL_TAGS = ['course_id', 'module_type']
 
     # For a homework problem, contains a JSON
@@ -137,11 +133,10 @@ class StudentModuleHistory(models.Model):
             history_entry.save()
 
 
-class XBlockFieldBase(CallStackMixin, models.Model):
+class XBlockFieldBase(models.Model):
     """
     Base class for all XBlock field storage.
     """
-    objects = CallStackManager()
 
     class Meta(object):  # pylint: disable=missing-docstring
         abstract = True

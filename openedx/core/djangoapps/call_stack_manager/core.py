@@ -47,7 +47,8 @@ log = logging.getLogger(__name__)
 STACK_BOOK = collections.defaultdict(list)
 
 # filter to trickle down call stacks
-EXCLUDE_REGEX = ['^.*python2.7.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$']
+EXCLUDE_REGEX = ['^.*python2.7.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$', '^.*call_stack_manager.*$',
+                 '^.*edxapp/src.*$']
 REGULAR_EXPS = [re.compile(x) for x in EXCLUDE_REGEX]
 
 # Variable which decides whether to track calls in the function or not. Do it by default.
