@@ -82,8 +82,7 @@ def capture_call_stack(current_model):
 
 
 class CallStackMixin(object):
-    """
-    A mixin class for getting call stacks when Save() and Delete() methods are called
+    """ A mixin class for getting call stacks when Save() and Delete() methods are called
     """
 
     def save(self, *args, **kwargs):
@@ -114,7 +113,7 @@ class CallStackManager(Manager):
 def donottrack(*classes_not_to_be_tracked):
     """function decorator which deals with toggling call stack
     Args:
-        *classes_not_to_be_tracked: model classes where tracking is undesirable
+        classes_not_to_be_tracked: model classes where tracking is undesirable
     Returns:
         wrapped function
     """
