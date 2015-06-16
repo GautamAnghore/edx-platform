@@ -89,8 +89,7 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
 
         * Create a new bookmark for a user.
 
-            The POST request must contain the "usage_id" parameter. It can
-            also include other parameters.
+            The POST request must contain only the "usage_id" parameter.
 
     **Example Requests**
 
@@ -123,7 +122,7 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
         * results:  A list of bookmarks returned. Each collection in the list
           contains the following fields.
 
-            * id: String. The identifier string for the bookmark, formatted as {user_id},{usage_id}.
+            * id: String. The identifier string for the bookmark, formatted as {username},{usage_id}.
 
             * course_id: String. The identifier string of the bookmark's course.
 
@@ -255,7 +254,7 @@ class BookmarksDetailView(APIView, BookmarksViewMixin):
         If the request is successful, an HTTP 200 "OK" response is returned with the following 
         information.
 
-        * id: String. The identifier string for the bookmark, formatted as {user_id},{usage_id}.
+        * id: String. The identifier string for the bookmark, formatted as {username},{usage_id}.
 
         * course_id: String. The identifier string of the bookmark's course.
 
