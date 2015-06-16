@@ -1592,7 +1592,7 @@ class ORA1DeprecationWarningMessageTest(CourseOutlineTest):
     """
     HEADING_TEXT = 'This course has ORA1 enabled. edX no longer supports ORA1.'
     COMPONENT_LIST_HEADING = ('Learners cannot see ORA1 assignments. If you want to use ORA in your course, '
-                              'you must replace the following ORA1 assignments with ORA2 assignments.')
+                              'you must replace the following published ORA1 assignments with ORA2 assignments.')
     ADVANCE_MODULES_REMOVE_TEXT = ('To avoid errors, edX strongly recommends that you remove '
                                    'ORA1 from the course advanced settings. To do this, go to the Advanced Settings '
                                    'page, locate the "Advanced Module List" setting, and then delete "peergrading" '
@@ -1607,7 +1607,7 @@ class ORA1DeprecationWarningMessageTest(CourseOutlineTest):
 
     def _install_ora1_components(self):
         """
-        Install ora1 compoents
+        Install ora1 components
         """
         parent_vertical = self.course_fixture.get_nested_xblocks(category="vertical")[0]
 

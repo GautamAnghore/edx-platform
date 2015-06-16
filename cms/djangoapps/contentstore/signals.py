@@ -38,4 +38,3 @@ def remove_ora1_deprecation_cache(sender, course_key, **kwargs):  # pylint: disa
     """
     cache_key = 'ora1.components.{course}'.format(course=course_key)
     cache.delete(cache_key)  # pylint: disable=maybe-no-member
-

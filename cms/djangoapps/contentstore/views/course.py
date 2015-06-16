@@ -32,7 +32,7 @@ from xmodule.modulestore import EdxJSONEncoder
 from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseError
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.locations import Location
-from opaque_keys.edx.keys import CourseKey
+from opaque_keys.edx.keys import CourseKey, UsageKey
 
 from django.views.decorators.csrf import ensure_csrf_cookie
 from contentstore.course_info_model import get_course_updates, update_course_updates, delete_course_update
@@ -509,7 +509,7 @@ def _ora1_deprecation_info(course_id, advanced_modules):
         ora1_components = []
         for __, block in ordered_blocks.items():
             if block['block_type'] in ['peergrading', 'combinedopenended']:
-                item = store.get_item(course_id.make_usage_key('vertical', block['parent'].rsplit('/', 1)[-1]))
+                item = store.get_item(UsageKey.from_string(block['parent']))
                 if not getattr(item, 'is_draft', False):
                     ora1_components.append(
                         [reverse_usage_url('container_handler', block['parent']), block['display_name']]
