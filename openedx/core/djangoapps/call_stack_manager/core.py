@@ -17,13 +17,17 @@ donottrack - mainly for the places where we know the calls. This decorator will 
 
 How to use-
 1. Import following in the file where class to be tracked resides
-    from openedx.core.lib.call_stack_manager import CallStackManager, CallStackMixin
+    from openedx.core.djangoapps.call_stack_manager import CallStackManager, CallStackMixin
 2. Override objects of default manager by writing following in any model class which you want to track-
     objects = CallStackManager()
 3. For tracking Save and Delete events-
     Use mixin called "CallStackMixin"
     For ex.
         class StudentModule(CallStackMixin, models.Model):
+4. Decorator is a parameterized decorator with class name/s as argument
+    How to use -
+    1. Import following
+        import from openedx.core.djangoapps.call_stack_manager import donottrack
 """
 
 import logging
@@ -43,8 +47,8 @@ log = logging.getLogger(__name__)
 STACK_BOOK = collections.defaultdict(list)
 
 # filter to trickle down call stacks
-EXCLUDE = ['^.*python2.7.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$']
-REGULAR_EXPS = [re.compile(x) for x in EXCLUDE]
+EXCLUDE_REGEX = ['^.*python2.7.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$']
+REGULAR_EXPS = [re.compile(x) for x in EXCLUDE_REGEX]
 
 # Variable which decides whether to track calls in the function or not. Do it by default.
 TRACK_FLAG = True
@@ -98,24 +102,17 @@ class CallStackMixin(object):
 
 
 class CallStackManager(Manager):
-    """
-    gets call stacks of model classes
+    """ A Manager class which overrides the default Manager class for getting call stacks
     """
     def get_query_set(self):
+        """overriding the default queryset API method
         """
-        overriding the default queryset API method
-
-        """
-        #print self.model
         capture_call_stack(self.model)
         return super(CallStackManager, self).get_query_set()
 
 
 def donottrack(*classes_not_to_be_tracked):
     """function decorator which deals with toggling call stack
-    How to use -
-    1. Just Import following
-        import from openedx.core.lib.call_stack_manager import donottrack
     Args:
         *classes_not_to_be_tracked: model classes where tracking is undesirable
     Returns:
