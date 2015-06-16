@@ -490,9 +490,9 @@ def _ora1_deprecation_info(course_id, advanced_modules):
         advance_settings_url (str): URL to advance settings page
     """
     data = {
-        'ora1_enabled': False,
+        'ora1_enabled': 'peergrading' in advanced_modules or 'combinedopenended' in advanced_modules,
         'ora1_components': [],
-        'advance_settings_url': ''
+        'advance_settings_url': reverse_course_url('advanced_settings_handler', course_id)
     }
 
     cache_key = 'ora1.components.{course}'.format(course=course_id)
@@ -517,9 +517,7 @@ def _ora1_deprecation_info(course_id, advanced_modules):
 
         cache.set(cache_key, ora1_components, 60 * 5)  # pylint: disable=maybe-no-member
 
-    data['ora1_enabled'] = 'peergrading' in advanced_modules or 'combinedopenended' in advanced_modules
     data['ora1_components'] = ora1_components
-    data['advance_settings_url'] = reverse_course_url('advanced_settings_handler', course_id)
 
     return data
 
