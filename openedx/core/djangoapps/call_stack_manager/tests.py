@@ -167,14 +167,6 @@ class TestingCallStackManager(TestCase):
         self.assertEqual(len(log_capt.call_args_list), 1)
 
 
-@donottrack(ModelWithCSMChild)
-def abstract_do_track():
-    """ Function for inheritence
-    """
-    ModelWithCSM.objects.filter(id_field=1)
-    ModelWithCSMChild.objects.filter(id1_field=1)
-
-
 @donottrack(ModelWithCSM)
 def abstract_do_not_track():
     """ Function for inheritence
