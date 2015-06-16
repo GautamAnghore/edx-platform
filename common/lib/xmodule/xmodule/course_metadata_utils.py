@@ -14,12 +14,12 @@ from .fields import Date
 DEFAULT_START_DATE = datetime(2030, 1, 1, tzinfo=UTC())
 
 
-def clean_id(location, padding_char):
+def get_clean_id_from_course_location(location, padding_char):
     """
-    Returns a unique deterministic base32-encoded ID for a course.
+    Given a course's location, returns a unique deterministic base32-encoded ID for the course.
 
     Arguments:
-        location (UsageKey): The UsageKey of said course
+        location (UsageKey): The location of said course.
         padding_char (str): Character used for padding at end of the encoded string.
                             The standard value for this is '='.
     """
@@ -28,44 +28,51 @@ def clean_id(location, padding_char):
     )
 
 
-def course_url_name(location):
+def get_url_from_course_location(location):
     """
-    Given a course location, return the course's URL.
+    Given a course's location, returns the course's URL.
 
     Arguments:
-        location (UsageKey): The usage key of the course in question.
+        location (UsageKey): The location of said question.
     """
     return location.name
 
 
-def display_name_with_default(descriptor):
+def get_course_display_name_with_default(course):
     """
-    Calculate the display name for a course.
+    Calculates the display name for a course.
 
     Default to the display_name if it isn't None, else fall back to creating
     a name based on the URL.
 
+    Unlike the rest of this module's functions, this function takes an entire course
+    descriptor/overview as a parameter. While testing, it seems that there are times
+    when course.display_name is not None, but course.location is None, which causes
+    calling course.url_name to crash. So, although we'd like to just pass in
+    course.location and course.url_name as arguments to this function, we can't
+    do so without breaking some tests.
+
     Arguments:
-        descriptor (CourseDescriptor|CourseOverview): descriptor or overview of said course.
+        course (CourseDescriptor|CourseOverview): descriptor or overview of said course.
     """
     return (
-        descriptor.display_name if descriptor.display_name is not None else descriptor.url_name.replace('_', ' ')
+        course.display_name if course.display_name is not None else course.url_name.replace('_', ' ')
     ).replace('<', '&lt;').replace('>', '&gt;')
 
 
-def course_number(location):
+def get_number_from_course_location(location):
     """
-    Given a course location, return the course's number.
+    Given a course location, returns the course's number.
 
     Arguments:
-        location (UsageKey): The usage key of the course in question.
+        location (UsageKey): The location of the course in question.
     """
     return location.course
 
 
 def has_course_started(start_date):
     """
-    Returns whether the current time is past the given course start time.
+    Given a course's start datetime, returns whether the current time is past it.
 
     Arguments:
         start_date (datetime): The start datetime of the course in question.
@@ -75,7 +82,7 @@ def has_course_started(start_date):
 
 def has_course_ended(end_date):
     """
-    Given a course end datetime, return whether (a) it is not None (b) the current time is past it.
+    Given a course's end datetime, returns whether (a) it is not None (b) the current time is past it.
 
     Arguments:
         end_date (datetime): The end datetime of the course in question.
@@ -90,18 +97,21 @@ def _add_timezone_string(date_time):
     return date_time + u" UTC"
 
 
-def start_date_is_still_default(start, advertised_start):
+def is_course_start_date_still_default(start, advertised_start):
     """
-    Checks if the start date set for a course is still default, i.e. .start has not been modified,
-    and .advertised_start has not been set.
+    Returns whether a course's start date hasn't yet been set.
+
+    Arguments:
+        start (datetime): The start datetime of the course in question.
+        advertised_start (str): The advertised start date of the course in question.
     """
     return advertised_start is None and start == DEFAULT_START_DATE
 
 
-def start_datetime_text(start, advertised_start, format_string, ugettext, strftime):
+def get_course_start_datetime_text(start, advertised_start, format_string, ugettext, strftime):
     """
-    Returns the desired text corresponding the course's start date and time in UTC.  Prefers .advertised_start,
-    then falls back to .start.
+    Calculates text to be shown to user regarding a course's start datetime in UTC..
+    Prefers .advertised_start, then falls back to .start.
 
     Arguments:
         start (datetime): the start date of a course
@@ -115,7 +125,7 @@ def start_datetime_text(start, advertised_start, format_string, ugettext, strfti
             date_to_display = Date().from_json(advertised_start)
         except ValueError:
             date_to_display = None
-    elif not start_date_is_still_default(start, advertised_start):
+    elif not is_course_start_date_still_default(start, advertised_start):
         date_to_display = advertised_start or start
     else:
         # Translators: TBD stands for 'To Be Determined' and is used when a course
@@ -131,9 +141,9 @@ def start_datetime_text(start, advertised_start, format_string, ugettext, strfti
         return advertised_start.title()
 
 
-def end_datetime_text(end, format_string, strftime_localized):
+def get_course_end_datetime_text(end, format_string, strftime_localized):
     """
-    Returns a formatted string for a course's end date or date_time.
+    Returns a formatted string for a course's end date or datetime.
     If end is none, an empty string will be returned.
 
     Arguments:
@@ -148,9 +158,17 @@ def end_datetime_text(end, format_string, strftime_localized):
         return formatted_date if format_string == "SHORT_DATE" else _add_timezone_string(formatted_date)
 
 
-def may_certify(certificates_display_behavior, certificates_show_before_end, has_ended):
+def may_certify_for_course(certificates_display_behavior, certificates_show_before_end, has_ended):
     """
     Returns whether it is acceptable to show the student a certificate download link for a course.
+
+    Arguments:
+        certificates_display_behavior (str): string describing the course's
+            certificate display behavior.
+            See CourseFields.certificates_display_behavior.help for more detail.
+        certificates_show_before_end (bool): whether user can download the course's
+            certificates before the course has ended.
+        has_ended (bool): Whether the course has ended.
     """
     show_early = (
         certificates_display_behavior in ('early_with_info', 'early_no_info')

@@ -152,7 +152,7 @@ class CourseOverview(django.db.models.Model):
             padding_char (str): Character used for padding at end of base-32
                                 -encoded string, defaulting to '='
         """
-        return course_metadata_utils.clean_id(self.location, padding_char)
+        return course_metadata_utils.get_clean_id_from_course_location(self.location, padding_char)
 
     @property
     def location(self):
@@ -171,21 +171,21 @@ class CourseOverview(django.db.models.Model):
         """
         Returns this course's number.
         """
-        return course_metadata_utils.course_number(self.location)
+        return course_metadata_utils.get_number_from_course_location(self.location)
 
     @property
     def url_name(self):
         """
         Returns this course's URL name.
         """
-        return course_metadata_utils.course_url_name(self.location)
+        return course_metadata_utils.get_url_from_course_location(self.location)
 
     @property
     def display_name_with_default(self):
         """
         Return reasonable display name for the course.
         """
-        return course_metadata_utils.display_name_with_default(self)
+        return course_metadata_utils.get_course_display_name_with_default(self)
 
     def has_started(self):
         """
@@ -204,7 +204,7 @@ class CourseOverview(django.db.models.Model):
         Returns the desired text corresponding the course's start date and time in UTC.  Prefers .advertised_start,
         then falls back to .start.
         """
-        return course_metadata_utils.start_datetime_text(
+        return course_metadata_utils.get_course_start_datetime_text(
             self.start,
             self.advertised_start,
             format_string,
@@ -218,7 +218,7 @@ class CourseOverview(django.db.models.Model):
         Checks if the start date set for the course is still default, i.e. .start has not been modified,
         and .advertised_start has not been set.
         """
-        return course_metadata_utils.start_date_is_still_default(
+        return course_metadata_utils.is_course_start_date_still_default(
             self.start,
             self.advertised_start,
         )
@@ -227,7 +227,7 @@ class CourseOverview(django.db.models.Model):
         """
         Returns the end date or date_time for the course formatted as a string.
         """
-        return course_metadata_utils.end_datetime_text(
+        return course_metadata_utils.get_course_end_datetime_text(
             self.end,
             format_string,
             strftime_localized
@@ -237,7 +237,7 @@ class CourseOverview(django.db.models.Model):
         """
         Return whether it is acceptable to show the student a certificate download link.
         """
-        return course_metadata_utils.may_certify(
+        return course_metadata_utils.may_certify_for_course(
             self.certificates_display_behavior,
             self.certificates_show_before_end,
             self.has_ended()

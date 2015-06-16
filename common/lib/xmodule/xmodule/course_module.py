@@ -1094,7 +1094,7 @@ class CourseDescriptor(CourseFields, LicenseMixin, SequenceDescriptor):
         """
         Return whether it is acceptable to show the student a certificate download link.
         """
-        return course_metadata_utils.may_certify(
+        return course_metadata_utils.may_certify_for_course(
             self.certificates_display_behavior,
             self.certificates_show_before_end,
             self.has_ended()
@@ -1360,7 +1360,7 @@ class CourseDescriptor(CourseFields, LicenseMixin, SequenceDescriptor):
         then falls back to .start
         """
         i18n = self.runtime.service(self, "i18n")
-        return course_metadata_utils.start_datetime_text(
+        return course_metadata_utils.get_course_start_datetime_text(
             self.start,
             self.advertised_start,
             format_string,
@@ -1374,7 +1374,7 @@ class CourseDescriptor(CourseFields, LicenseMixin, SequenceDescriptor):
         Checks if the start date set for the course is still default, i.e. .start has not been modified,
         and .advertised_start has not been set.
         """
-        return course_metadata_utils.start_date_is_still_default(
+        return course_metadata_utils.is_course_start_date_still_default(
             self.start,
             self.advertised_start
         )
@@ -1383,7 +1383,7 @@ class CourseDescriptor(CourseFields, LicenseMixin, SequenceDescriptor):
         """
         Returns the end date or date_time for the course formatted as a string.
         """
-        return course_metadata_utils.end_datetime_text(
+        return course_metadata_utils.get_course_end_datetime_text(
             self.end,
             format_string,
             self.runtime.service(self, "i18n").strftime
@@ -1408,7 +1408,7 @@ class CourseDescriptor(CourseFields, LicenseMixin, SequenceDescriptor):
 
     @property
     def number(self):
-        return course_metadata_utils.course_number(self.location)
+        return course_metadata_utils.get_number_from_course_location(self.location)
 
     @property
     def display_number_with_default(self):
@@ -1449,7 +1449,7 @@ class CourseDescriptor(CourseFields, LicenseMixin, SequenceDescriptor):
         Returns a unique deterministic base32-encoded ID for the course.
         The optional padding_char parameter allows you to override the "=" character used for padding.
         """
-        return course_metadata_utils.clean_id(self.location, padding_char)
+        return course_metadata_utils.get_clean_id_from_course_location(self.location, padding_char)
 
     @property
     def teams_enabled(self):
