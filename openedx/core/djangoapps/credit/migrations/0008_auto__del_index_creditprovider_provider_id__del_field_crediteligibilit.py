@@ -8,11 +8,17 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Removing index on 'CreditProvider', fields ['provider_id']
+        db.delete_index('credit_creditprovider', ['provider_id'])
+
         # Deleting field 'CreditEligibility.provider'
         db.delete_column('credit_crediteligibility', 'provider_id')
 
 
     def backwards(self, orm):
+        # Adding index on 'CreditProvider', fields ['provider_id']
+        db.create_index('credit_creditprovider', ['provider_id'])
+
         # Adding field 'CreditEligibility.provider'
         db.add_column('credit_crediteligibility', 'provider',
                       self.gf('django.db.models.fields.related.ForeignKey')(default='', related_name='eligibilities', to=orm['credit.CreditProvider']),
@@ -77,10 +83,11 @@ class Migration(SchemaMigration):
             'created': ('model_utils.fields.AutoCreatedField', [], {'default': 'datetime.datetime.now'}),
             'display_name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'eligibility_duration': ('django.db.models.fields.PositiveIntegerField', [], {'default': '31556970'}),
+            'enable_integration': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'modified': ('model_utils.fields.AutoLastModifiedField', [], {'default': 'datetime.datetime.now'}),
-            'provider_id': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255', 'db_index': 'True'}),
-            'provider_url': ('django.db.models.fields.URLField', [], {'default': "''", 'unique': 'True', 'max_length': '255'})
+            'provider_id': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'provider_url': ('django.db.models.fields.URLField', [], {'default': "''", 'max_length': '200'})
         },
         'credit.creditrequest': {
             'Meta': {'unique_together': "(('username', 'course', 'provider'),)", 'object_name': 'CreditRequest'},

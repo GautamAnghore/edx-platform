@@ -3,6 +3,7 @@
 <%!
 from django.utils.translation import ugettext as _
 from course_modes.models import CourseMode
+from util.date_utils import get_default_time_display
 %>
 <%namespace name='static' file='../static_content.html'/>
 
@@ -13,7 +14,7 @@ from course_modes.models import CourseMode
             % if credit_message["urgent"]:
                 ${_("{username}, your eligibility for credit expires on {expiry}. Don't miss out!").format(
                         username=credit_message["user_full_name"],
-                        expiry=credit_message["expiry"]
+                        expiry=get_default_time_display(credit_message["expiry"])
                     )
                 }
             % else:
@@ -24,7 +25,7 @@ from course_modes.models import CourseMode
                 }
             % endif
             </span>
-            <span style="float: right"> <a class="btn" href="" target="_blank">Purchase Credit</a> </span>
+            <span class="purchase_credit"> <a class="btn" href="" target="_blank">${_("Purchase Credit")}</a> </span>
 
         % elif credit_message["status"] == "pending":
             ${_("Thank you, your payment is complete, your credit is processing. Please see {provider_link} for more information.").format(

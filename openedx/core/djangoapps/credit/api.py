@@ -590,6 +590,11 @@ def get_credit_eligibility(username):
         A dict of eligibilities
     """
     eligibilities = CreditEligibility.get_user_eligibility(username)
+    user_credit_requests = get_credit_requests_for_user(username)
+    request_dict = {}
+    # Change the list to dict for iteration
+    for request in user_credit_requests:
+        request_dict[request["course_key"]]=request
     user_eligibilities = {}
     for eligibility in eligibilities:
         course_key = eligibility.course.course_key
@@ -602,11 +607,10 @@ def get_credit_eligibility(username):
 
         # Default status is requirements_meet
         user_eligibilities[unicode(course_key)]["status"] = "requirements_meet"
-
-        credit_request_status, provider = _get_credit_request_status(username, course_key)
-        if credit_request_status:
-            user_eligibilities[unicode(course_key)]["status"] = credit_request_status
-            user_eligibilities[unicode(course_key)]["provider"] = provider
+        # If there is some request user has made for this eligibility then update the status
+        if unicode(course_key) in request_dict:
+            user_eligibilities[unicode(course_key)]["status"] = request_dict[unicode(course_key)]["status"]
+            user_eligibilities[unicode(course_key)]["provider"] = request_dict[unicode(course_key)]["provider"]
 
     return user_eligibilities
 
