@@ -58,14 +58,14 @@ from microsite_configuration import microsite
   %>
   <div class="wrapper wrapper-alert wrapper-alert-error is-shown">
     <div class="alert announcement">
-      <i class="feedback-symbol fa fa-warning"></i>
+      <i class="feedback-symbol fa fa-warning" aria-hidden="true"></i><span class="sr">${_("Warning")}</span>
 
       <div class="copy">
           <h2 class="title title-3 warning-heading-text">${_("This course has ORA1 enabled. {platform_name} no longer supports ORA1.").format(platform_name=platform_name)}</h2>
 
           %if ora1_deprecation_info.get('ora1_components'):
               <div class="components-list">
-                  <p class="components-list-heading-text">${_("Learners cannot see ORA1 assignments. If you want to use ORA in your course, you must replace the following ORA1 assignments with ORA2 assignments.")}</p>
+                  <p class="components-list-heading-text">${_("Learners cannot see ORA1 assignments. If you want to use ORA in your course, you must replace the following published ORA1 assignments with ORA2 assignments.")}</p>
                   <nav class="nav-related" aria-label="${_('ORA 1 Components')}">
                       <ul>
                           % for component_parent_url, component_display_name in ora1_deprecation_info['ora1_components']:

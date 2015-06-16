@@ -344,13 +344,14 @@ class TestCourseOutline(CourseTestCase):
         _assert_settings_link_present(response)
 
     @ddt.data(
-        {'ora1_advance_modules': False, 'ora1_components': False},
-        {'ora1_advance_modules': False, 'ora1_components': True},
-        {'ora1_advance_modules': True, 'ora1_components': False},
-        {'ora1_advance_modules': True, 'ora1_components': True},
+        {'ora1_advance_modules': False, 'ora1_components': False, 'draft': False},
+        {'ora1_advance_modules': False, 'ora1_components': True, 'draft': False},
+        {'ora1_advance_modules': True, 'ora1_components': False, 'draft': False},
+        {'ora1_advance_modules': True, 'ora1_components': True, 'draft': False},
+        {'ora1_advance_modules': True, 'ora1_components': True, 'draft': True},
     )
     @ddt.unpack
-    def test_verify_ora1_deprecated_warning_message(self, ora1_advance_modules, ora1_components):
+    def test_verify_ora1_deprecated_warning_message(self, ora1_advance_modules, ora1_components, draft):
         """
         Verify ora1 deprecated warning info
         """
@@ -359,8 +360,15 @@ class TestCourseOutline(CourseTestCase):
             ItemFactory.create(parent_location=self.vertical.location, category="peergrading", display_name="Peer")
             ItemFactory.create(parent_location=self.vertical.location, category="combinedopenended", display_name="COE")
 
-            expected_ora1_components.append([reverse_usage_url('container_handler', self.vertical.location), 'Peer'])
-            expected_ora1_components.append([reverse_usage_url('container_handler', self.vertical.location), 'COE'])
+            if draft:
+                self.store.convert_to_draft(self.vertical.location, self.user.id)
+            else:
+                expected_ora1_components.append(
+                    [reverse_usage_url('container_handler', self.vertical.location), 'Peer']
+                )
+                expected_ora1_components.append(
+                    [reverse_usage_url('container_handler', self.vertical.location), 'COE']
+                )
 
         course_module = modulestore().get_item(self.course.location)
 

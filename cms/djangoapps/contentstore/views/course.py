@@ -489,20 +489,13 @@ def _ora1_deprecation_info(course_id, advanced_modules):
         ora1_components (list): List of ora1 components and their parent's url
         advance_settings_url (str): URL to advance settings page
     """
-    default = {
+    data = {
         'ora1_enabled': False,
         'ora1_components': [],
         'advance_settings_url': ''
     }
 
-    modified_timestamp = CourseStructure.objects.filter(course_id=course_id).values('modified')
-    if modified_timestamp.exists():
-        cache_key = 'ora1.components.{course}.{modified}'.format(
-            course=course_id,
-            modified=modified_timestamp[0]['modified']
-        )
-    else:
-        return default
+    cache_key = 'ora1.components.{course}'.format(course=course_id)
 
     ora1_components = cache.get(cache_key)  # pylint: disable=maybe-no-member
     if not ora1_components:
@@ -510,20 +503,25 @@ def _ora1_deprecation_info(course_id, advanced_modules):
             course_structure = CourseStructure.objects.get(course_id=course_id)
             ordered_blocks = course_structure.ordered_blocks
         except CourseStructure.DoesNotExist:
-            return default
+            return data
 
+        store = modulestore()
         ora1_components = []
         for __, block in ordered_blocks.items():
             if block['block_type'] in ['peergrading', 'combinedopenended']:
-                ora1_components.append([reverse_usage_url('container_handler', block['parent']), block['display_name']])
+                item = store.get_item(course_id.make_usage_key('vertical', block['parent'].rsplit('/', 1)[-1]))
+                if not getattr(item, 'is_draft', False):
+                    ora1_components.append(
+                        [reverse_usage_url('container_handler', block['parent']), block['display_name']]
+                    )
 
         cache.set(cache_key, ora1_components, 60 * 5)  # pylint: disable=maybe-no-member
 
-    return {
-        'ora1_enabled': 'peergrading' in advanced_modules or 'combinedopenended' in advanced_modules,
-        'ora1_components': ora1_components,
-        'advance_settings_url': reverse_course_url('advanced_settings_handler', course_id)
-    }
+    data['ora1_enabled'] = 'peergrading' in advanced_modules or 'combinedopenended' in advanced_modules
+    data['ora1_components'] = ora1_components
+    data['advance_settings_url'] = reverse_course_url('advanced_settings_handler', course_id)
+
+    return data
 
 
 @login_required
