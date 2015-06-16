@@ -63,7 +63,6 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         # Test if value of these attributes match between the three objects
         fields_to_test = [
             'id',
-            'location',
             'display_name',
             'display_number_with_default',
             'display_org_with_default',
@@ -94,17 +93,20 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
 
         # Test if return values for all methods are equal between the three objects
         methods_to_test = [
-            'clean_id',
-            'has_ended',
-            'has_started',
-            'start_datetime_text',
-            'end_datetime_text',
-            'may_certify',
+            ('clean_id', ()),
+            ('clean_id', ('#',)),
+            ('has_ended', ()),
+            ('has_started', ()),
+            ('start_datetime_text', ('SHORT_DATE',)),
+            ('start_datetime_text', ('DATE_TIME',)),
+            ('end_datetime_text', ('SHORT_DATE',)),
+            ('end_datetime_text', ('DATE_TIME',)),
+            ('may_certify', ()),
         ]
-        for method_name in methods_to_test:
-            course_value = getattr(course, method_name)()
-            cache_miss_value = getattr(course_overview_cache_miss, method_name)()
-            cache_hit_value = getattr(course_overview_cache_hit, method_name)()
+        for method_name, method_args in methods_to_test:
+            course_value = getattr(course, method_name)(*method_args)
+            cache_miss_value = getattr(course_overview_cache_miss, method_name)(*method_args)
+            cache_hit_value = getattr(course_overview_cache_hit, method_name)(*method_args)
             self.assertEqual(course_value, cache_miss_value)
             self.assertEqual(cache_miss_value, cache_hit_value)
 
@@ -187,7 +189,7 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         """Tests if CourseOverviews and CourseDescriptors behave the same
         by comparing pairs of them given a variety of scenarios.
 
-        Args:
+        Arguments:
             course_kwargs (dict): kwargs to be passed to course constructor
             modulestore_type (ModuleStoreEnum.Type)
             is_user_enrolled (bool)
@@ -203,57 +205,31 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         self.check_course_overview_against_course(course)
 
     @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
-    def test_course_overview_str(self, modulestore_type):
-        """
-        Tests the __repr__ and __str__ methods of CourseOverview.
-        """
-        course = CourseFactory.create(
-            course="TEST101",
-            org="edX",
-            run="Run1",
-            mobile_available=True,
-            default_store=modulestore_type
-        )
-        course_overview = CourseOverview.get_from_id(course.id)
-        print "1>> " + course.__repr__()
-        print "2>> " + course.__str__()
-        print "3>> " + course_overview.__repr__()
-        print "4>> " + course_overview.__str__()
-
-    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
     def test_course_overview_cache_invalidation(self, modulestore_type):
         """
         Tests that when a course is published, the corresponding
         course_overview is removed from the cache.
         """
-        print '============ START ' + modulestore_type + ' ================== '
+        with self.store.default_store(modulestore_type):
 
-        # Create a course where mobile_available is True.
-        course = CourseFactory.create(
-            course="TEST103",
-            org="edX",
-            run="Run1",
-            mobile_available=True,
-            default_store=modulestore_type
-        )
-        course_overview1 = CourseOverview.get_from_id(course.id)
-        self.assertTrue(course_overview1.mobile_available)
+            # Create a course where mobile_available is True.
+            course = CourseFactory.create(
+                course="TEST101",
+                org="edX",
+                run="Run1",
+                mobile_available=True,
+                default_store=modulestore_type
+            )
+            course_overview1 = CourseOverview.get_from_id(course.id)
+            self.assertTrue(course_overview1.mobile_available)
 
-        # Set mobile_available to False and update the course.
-        # This fires a course_published signal, which should be caught in signals.py, which should in turn
-        # delete the corresponding CourseOverview from the cache.
-        course.mobile_available = False
-        print 'updating...'
-        updated = self.store.update_item(course, ModuleStoreEnum.UserID.test)
-        print 'done updating. var=' + str(updated.mobile_available)
-        print 'publishing...'
-        published = self.store.publish(course.location, ModuleStoreEnum.UserID.test)
-        print 'done publishing. var=' + str(published.mobile_available)
-        print 'loaded from modulestore 1. var=' + str(self.store.get_course(course.id).mobile_available)
+            # Set mobile_available to False and update the course.
+            # This fires a course_published signal, which should be caught in signals.py, which should in turn
+            # delete the corresponding CourseOverview from the cache.
+            course.mobile_available = False
+            with self.store.branch_setting(ModuleStoreEnum.Branch.draft_preferred):
+                self.store.update_item(course, ModuleStoreEnum.UserID.test)
 
-
-        # Make sure that when we load the CourseOverview again, mobile_available is updated.
-        course_overview2 = CourseOverview.get_from_id(course.id)
-        print 'loaded from modulestore 2. var=' + str(self.store.get_course(course.id).mobile_available)
-        self.assertFalse(course_overview2.mobile_available)
-        print '============ END ' + modulestore_type + ' ================== '
+            # Make sure that when we load the CourseOverview again, mobile_available is updated.
+            course_overview2 = CourseOverview.get_from_id(course.id)
+            self.assertFalse(course_overview2.mobile_available)

@@ -2,12 +2,10 @@
 Declaration of CourseOverview model
 """
 
-from datetime import datetime
 import json
 
 import django.db.models
 from django.db.models.fields import BooleanField, DateTimeField, DecimalField, TextField
-from django.utils.timezone import UTC
 from django.utils.translation import ugettext
 
 from lms.djangoapps.certificates.api import get_active_web_certificate
@@ -134,20 +132,6 @@ class CourseOverview(django.db.models.Model):
                 course_overview.save()  # Save new overview to the cache
         return course_overview
 
-    def __repr__(self):
-        """
-        Returns a simple string representation of this object for debugging.
-
-        Example return value: CourseOverview(location=course-v1://edX+DemoX.1+2014)
-        """
-        return "{}(id={})".format(self.__class__.__name__, self.id)
-
-    def __str__(self):
-        """
-        Returns a string representation of this object suitable for a user to see.
-        """
-        return unicode(self.id)
-
     def clean_id(self, padding_char='='):
         """
         Returns a unique deterministic base32-encoded ID for the course.
@@ -168,7 +152,9 @@ class CourseOverview(django.db.models.Model):
         method is a wrapper around _location attribute that fixes the problem
         by calling map_into_course, which restores the run attribute.
         """
-        return self._location.map_into_course(self.id)  # pylint: disable=no-member
+        if self._location.run is None:
+            self._location = self._location.map_into_course(self.id)
+        return self._location
 
     @property
     def number(self):
