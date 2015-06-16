@@ -2,12 +2,10 @@
 Declaration of CourseOverview model
 """
 
-from datetime import datetime
 import json
 
 import django.db.models
 from django.db.models.fields import BooleanField, DateTimeField, DecimalField, TextField
-from django.utils.timezone import UTC
 from django.utils.translation import ugettext
 
 from lms.djangoapps.certificates.api import get_active_web_certificate
@@ -48,7 +46,7 @@ class CourseOverview(django.db.models.Model):
     # Certification data
     certificates_display_behavior = TextField(null=True)
     certificates_show_before_end = BooleanField()
-    has_active_web_certificates = BooleanField()
+    has_any_active_web_certificate = BooleanField()
     cert_name_short = TextField()
     cert_name_long = TextField()
 
@@ -91,7 +89,7 @@ class CourseOverview(django.db.models.Model):
 
             certificates_display_behavior=course.certificates_display_behavior,
             certificates_show_before_end=course.certificates_show_before_end,
-            has_active_web_certificates=(get_active_web_certificate(course) is not None),
+            has_any_active_web_certificate=(get_active_web_certificate(course) is not None),
             cert_name_short=course.cert_name_short,
             cert_name_long=course.cert_name_long,
             lowest_passing_grade=course.lowest_passing_grade,
@@ -120,29 +118,19 @@ class CourseOverview(django.db.models.Model):
         """
         course_overview = None
         try:
+            print 'loading ' + str(course_id) + ' from cache...'
             course_overview = CourseOverview.objects.get(id=course_id)
+            print 'cache hit'
             # Cache hit! Just return the overview
         except CourseOverview.DoesNotExist:
+            print 'cache miss'
             # Cache miss. Load entire course and create a CourseOverview from it
             course = modulestore().get_course(course_id)
             if course:
                 course_overview = CourseOverview._create_from_course(course)
+                print 'made course overview. var=' + str(course_overview.mobile_available)
                 course_overview.save()  # Save new overview to the cache
         return course_overview
-
-    def __repr__(self):
-        """
-        Returns a simple string representation of this object for debugging.
-
-        Example return value: CourseOverview(location=course-v1://edX+DemoX.1+2014)
-        """
-        return "{}(location={})".format(self.__class__.__name__, self.location)
-
-    def __str__(self):
-        """
-        Returns a string representation of this object suitable for a user to see.
-        """
-        return unicode(self.id)
 
     def clean_id(self, padding_char='='):
         """
@@ -152,7 +140,7 @@ class CourseOverview(django.db.models.Model):
             padding_char (str): Character used for padding at end of base-32
                                 -encoded string, defaulting to '='
         """
-        return course_metadata_utils.clean_id(self.location, padding_char)
+        return course_metadata_utils.clean_course_key(self.location.course_key, padding_char)
 
     @property
     def location(self):
@@ -164,28 +152,30 @@ class CourseOverview(django.db.models.Model):
         method is a wrapper around _location attribute that fixes the problem
         by calling map_into_course, which restores the run attribute.
         """
-        return self._location.map_into_course(self.id)  # pylint: disable=no-member
+        if self._location.run is None:
+            self._location = self._location.map_into_course(self.id)
+        return self._location
 
     @property
     def number(self):
         """
         Returns this course's number.
         """
-        return course_metadata_utils.course_number(self.location)
+        return course_metadata_utils.get_number_from_course_location(self.location)
 
     @property
     def url_name(self):
         """
         Returns this course's URL name.
         """
-        return course_metadata_utils.course_url_name(self.location)
+        return course_metadata_utils.get_url_from_course_location(self.location)
 
     @property
     def display_name_with_default(self):
         """
         Return reasonable display name for the course.
         """
-        return course_metadata_utils.display_name_with_default(self)
+        return course_metadata_utils.get_course_display_name_with_default(self)
 
     def has_started(self):
         """
@@ -204,7 +194,7 @@ class CourseOverview(django.db.models.Model):
         Returns the desired text corresponding the course's start date and time in UTC.  Prefers .advertised_start,
         then falls back to .start.
         """
-        return course_metadata_utils.start_datetime_text(
+        return course_metadata_utils.get_course_start_datetime_text(
             self.start,
             self.advertised_start,
             format_string,
@@ -218,7 +208,7 @@ class CourseOverview(django.db.models.Model):
         Checks if the start date set for the course is still default, i.e. .start has not been modified,
         and .advertised_start has not been set.
         """
-        return course_metadata_utils.start_date_is_still_default(
+        return course_metadata_utils.is_course_start_date_still_default(
             self.start,
             self.advertised_start,
         )
@@ -227,7 +217,7 @@ class CourseOverview(django.db.models.Model):
         """
         Returns the end date or date_time for the course formatted as a string.
         """
-        return course_metadata_utils.end_datetime_text(
+        return course_metadata_utils.get_course_end_datetime_text(
             self.end,
             format_string,
             strftime_localized
@@ -237,7 +227,7 @@ class CourseOverview(django.db.models.Model):
         """
         Return whether it is acceptable to show the student a certificate download link.
         """
-        return course_metadata_utils.may_certify(
+        return course_metadata_utils.may_certify_for_course(
             self.certificates_display_behavior,
             self.certificates_show_before_end,
             self.has_ended()

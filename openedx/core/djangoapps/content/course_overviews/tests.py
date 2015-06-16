@@ -4,16 +4,17 @@ Tests for course_overviews app.
 import datetime
 import ddt
 import itertools
-import time
+import pytz
+import math
 
 from django.utils import timezone
 
+from lms.djangoapps.certificates.api import get_active_web_certificate
+from lms.djangoapps.courseware.courses import course_image_url
+from xmodule.course_metadata_utils import DEFAULT_START_DATE
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.modulestore import ModuleStoreEnum
-
-from lms.djangoapps.certificates.api import get_active_web_certificate
-from lms.djangoapps.courseware.courses import course_image_url
 
 from .models import CourseOverview
 
@@ -25,8 +26,9 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
     """
 
     TODAY = timezone.now()
-    YESTERDAY = TODAY - datetime.timedelta(days=1)
-    TOMORROW = TODAY + datetime.timedelta(days=1)
+    LAST_MONTH = TODAY + datetime.timedelta(days=30)
+    LAST_WEEK = TODAY - datetime.timedelta(days=7)
+    NEXT_WEEK = TODAY + datetime.timedelta(days=7)
     NEXT_MONTH = TODAY + datetime.timedelta(days=30)
 
     def check_course_overview_against_course(self, course):
@@ -39,6 +41,19 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
          - a CourseOverviewDescriptor that was loaded from the MySQL database
         """
 
+        def get_seconds_since_epoch(dt):
+            """
+            Returns the number of seconds between the Unix Epoch and the given datetime.
+            If the given dt is None, return None.
+
+            Arguments:
+                dt (datetime): The datetime in question.
+            """
+            if dt is None:
+                return None
+            epoch = datetime.datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
+            return math.floor((dt - epoch).total_seconds())
+
         # Load the CourseOverview from the cache twice. The first load will be a cache miss (because the cache
         # is empty) so the course will be newly created with CourseOverviewDescriptor.create_from_course. The second
         # load will be a cache hit, so the course will be loaded from the cache.
@@ -48,7 +63,6 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         # Test if value of these attributes match between the three objects
         fields_to_test = [
             'id',
-            'location',
             'display_name',
             'display_number_with_default',
             'display_org_with_default',
@@ -77,32 +91,50 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
             self.assertEqual(course_value, cache_miss_value)
             self.assertEqual(cache_miss_value, cache_hit_value)
 
-        # Test if return values all methods are equal between the three objects
+        # Test if return values for all methods are equal between the three objects
         methods_to_test = [
-            'clean_id',
-            'has_ended',
-            'has_started',
-            'start_datetime_text',
-            'end_datetime_text',
-            'may_certify',
+            ('clean_id', ()),
+            ('clean_id', ('#',)),
+            ('has_ended', ()),
+            ('has_started', ()),
+            ('start_datetime_text', ('SHORT_DATE',)),
+            ('start_datetime_text', ('DATE_TIME',)),
+            ('end_datetime_text', ('SHORT_DATE',)),
+            ('end_datetime_text', ('DATE_TIME',)),
+            ('may_certify', ()),
         ]
-        for method_name in methods_to_test:
-            course_value = getattr(course, method_name)()
-            cache_miss_value = getattr(course_overview_cache_miss, method_name)()
-            cache_hit_value = getattr(course_overview_cache_hit, method_name)()
+        for method_name, method_args in methods_to_test:
+            course_value = getattr(course, method_name)(*method_args)
+            cache_miss_value = getattr(course_overview_cache_miss, method_name)(*method_args)
+            cache_hit_value = getattr(course_overview_cache_hit, method_name)(*method_args)
             self.assertEqual(course_value, cache_miss_value)
             self.assertEqual(cache_miss_value, cache_hit_value)
 
         # Other values to test
+        # Note: we test the start and end attributes here instead of in fields_to_test,
+        # because I ran into trouble while testing datetimes for equality. There were
+        # instances where dates that were exactly equal would compare as inequal
+        # because one of them had "utc" as its timezone, and other had "tzutc" as
+        # its timezone (even though those timezones are the exact same except for
+        # their names). So, we simply test if the start and end times are the
+        # same number of seconds from the Unix epoch.
         others_to_test = [(
             course_image_url(course),
             course_overview_cache_miss.course_image_url,
             course_overview_cache_hit.course_image_url
         ), (
             get_active_web_certificate(course) is not None,
-            course_overview_cache_miss.has_active_web_certificates,
-            course_overview_cache_hit.has_active_web_certificates
+            course_overview_cache_miss.has_any_active_web_certificate,
+            course_overview_cache_hit.has_any_active_web_certificate
 
+        ), (
+            get_seconds_since_epoch(course.start),
+            get_seconds_since_epoch(course_overview_cache_miss.start),
+            get_seconds_since_epoch(course_overview_cache_hit.start),
+        ), (
+            get_seconds_since_epoch(course.end),
+            get_seconds_since_epoch(course_overview_cache_miss.end),
+            get_seconds_since_epoch(course_overview_cache_hit.end),
         )]
         for (course_value, cache_miss_value, cache_hit_value) in others_to_test:
             self.assertEqual(course_value, cache_miss_value)
@@ -111,13 +143,44 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
     @ddt.data(*itertools.product(
         [
             {
-                "static_asset_path": "/my/cool/path",
-                "display_name": "Test Course",
-                "start": YESTERDAY,
-                "end": TOMORROW,
-                "pre_requisite_courses": ['course-v1://edX+test1+run1', 'course-v1://edX+test2+run1']
+                "display_name": "Test Course",              # Display name provided
+                "start": LAST_WEEK,                         # In the middle of the course
+                "end": NEXT_WEEK,
+                "advertised_start": "2015-01-01 11:22:33",  # Parse-able advertised_start
+                "pre_requisite_courses": [                  # Has pre-requisites
+                    'course-v1://edX+test1+run1',
+                    'course-v1://edX+test2+run1'
+                ],
+                "static_asset_path": "/my/abs/path",        # Absolute path
+                "certificates_show_before_end": True,
             },
-            {}
+            {
+                "display_name": "",                         # Empty display name
+                "start": NEXT_WEEK,                         # Course hasn't started yet
+                "end": NEXT_MONTH,
+                "advertised_start": "Very Soon!",           # Not parse-able advertised_start
+                "pre_requisite_courses": [],                # No pre-requisites
+                "static_asset_path": "my/relative/path",    # Relative asset path
+                "certificates_show_before_end": False,
+            },
+            {
+                "display_name": "",                         # Empty display name
+                "start": LAST_MONTH,                        # Course already ended
+                "end": LAST_WEEK,
+                "advertised_start": None,                   # No advertised start
+                "pre_requisite_courses": [],                # No pre-requisites
+                "static_asset_path": "",                    # Empty asset path
+                "certificates_show_before_end": False,
+            },
+            {
+                #                                           # Don't set display name
+                "start": DEFAULT_START_DATE,                # Default start and end dates
+                "end": None,
+                "advertised_start": None,                   # No advertised start
+                "pre_requisite_courses": [],                # No pre-requisites
+                "static_asset_path": None,                  # No asset path
+                "certificates_show_before_end": False,
+            }
         ],
         [ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split]
     ))
@@ -126,42 +189,47 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         """Tests if CourseOverviews and CourseDescriptors behave the same
         by comparing pairs of them given a variety of scenarios.
 
-        Args:
+        Arguments:
             course_kwargs (dict): kwargs to be passed to course constructor
             modulestore_type (ModuleStoreEnum.Type)
             is_user_enrolled (bool)
         """
 
         course = CourseFactory.create(
-            course="test_course",
+            course="TEST101",
             org="edX",
+            run="Run1",
             default_store=modulestore_type,
             **course_kwargs
         )
         self.check_course_overview_against_course(course)
 
-    def test_course_overview_cache_invalidation(self):
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_course_overview_cache_invalidation(self, modulestore_type):
         """
         Tests that when a course is published, the corresponding
         course_overview is removed from the cache.
         """
+        with self.store.default_store(modulestore_type):
 
-        # Create a course where mobile_available is True.
-        course = CourseFactory.create(
-            course="test_course",
-            org="edX",
-            mobile_available=True
-        )
-        course_overview1 = CourseOverview.get_from_id(course.id)
-        self.assertTrue(course_overview1.mobile_available)
+            # Create a course where mobile_available is True.
+            course = CourseFactory.create(
+                course="TEST101",
+                org="edX",
+                run="Run1",
+                mobile_available=True,
+                default_store=modulestore_type
+            )
+            course_overview1 = CourseOverview.get_from_id(course.id)
+            self.assertTrue(course_overview1.mobile_available)
 
-        # Set mobile_available to False and update the course.
-        # This fires a course_published signal, which should be caught in signals.py, which should in turn
-        # delete the corresponding CourseOverview from the cache.
-        course.mobile_available = False
-        self.store.update_item(course, ModuleStoreEnum.UserID.test)
-        time.sleep(0.01)  # Give a few milliseconds for the delete query to take place
+            # Set mobile_available to False and update the course.
+            # This fires a course_published signal, which should be caught in signals.py, which should in turn
+            # delete the corresponding CourseOverview from the cache.
+            course.mobile_available = False
+            with self.store.branch_setting(ModuleStoreEnum.Branch.draft_preferred):
+                self.store.update_item(course, ModuleStoreEnum.UserID.test)
 
-        # Make sure that when we load the CourseOverview again, mobile_available is updated.
-        course_overview2 = CourseOverview.get_from_id(course.id)
-        self.assertFalse(course_overview2.mobile_available)
+            # Make sure that when we load the CourseOverview again, mobile_available is updated.
+            course_overview2 = CourseOverview.get_from_id(course.id)
+            self.assertFalse(course_overview2.mobile_available)
