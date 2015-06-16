@@ -806,8 +806,8 @@ class CombinedOpenEndedModuleTest(unittest.TestCase):
 
         self.assertEqual(
             validation.summary.text,
-            u"ORA 1 has been deprecated and removed from edX. Please delete "
-            u"this component and replace with an ORA 2 component."
+            "ORA1 has been deprecated and removed from edX. To use this assessment, "
+            "replace this ORA1 component with an ORA2 component"
         )
         self.assertEqual(validation.summary.type, StudioValidationMessage.ERROR)
 

@@ -735,9 +735,10 @@ class PeerGradingDescriptor(PeerGradingFields, RawDescriptor):
 
         validation.summary = StudioValidationMessage(
             StudioValidationMessage.ERROR,
-            _(u"ORA 1 has been deprecated and removed from {0}. "
-              u"Please delete this component and replace with an "
-              u"ORA 2 component.".format(microsite.get_value('platform_name', settings.PLATFORM_NAME))
+            _(
+                u"ORA1 has been deprecated and removed from {0}. "
+                u"To use this assessment, replace this ORA1 component "
+                u"with an ORA2 component".format(microsite.get_value('platform_name', settings.PLATFORM_NAME))
             )
         )
 
