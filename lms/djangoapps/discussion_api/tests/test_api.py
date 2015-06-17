@@ -99,6 +99,9 @@ class GetCourseTest(UrlResetMixin, ModuleStoreTestCase):
                 "id": unicode(self.course.id),
                 "blackouts": [],
                 "thread_list_url": "http://testserver/api/discussion/v1/threads/?course_id=x%2Fy%2Fz",
+                "following_thread_list_url": (
+                    "http://testserver/api/discussion/v1/threads/?course_id=x%2Fy%2Fz&view=following"
+                ),
                 "topics_url": "http://testserver/api/discussion/v1/course_topics/x/y/z",
             }
         )
@@ -693,6 +696,24 @@ class GetThreadListTest(CommentsServiceMockMixin, UrlResetMixin, ModuleStoreTest
         self.register_get_threads_response([], page=3, num_pages=3)
         with self.assertRaises(Http404):
             get_thread_list(self.request, self.course.id, page=4, page_size=10)
+
+    def test_view_following(self):
+        self.register_subscribed_threads_response(self.user, [], page=1, num_pages=1)
+        result = get_thread_list(
+            self.request,
+            self.course.id,
+            page=1,
+            page_size=11,
+            view="following"
+        )
+        self.assertEqual(result, {"results": [], "next": None, "previous": None})
+        self.assert_last_query_params({
+            "course_id": [unicode(self.course.id)],
+            "sort_key": ["date"],
+            "sort_order": ["desc"],
+            "page": ["1"],
+            "per_page": ["11"],
+        })
 
 
 @ddt.ddt

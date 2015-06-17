@@ -104,14 +104,15 @@ def _is_user_author_or_privileged(cc_content, context):
     )
 
 
-def get_thread_list_url(request, course_key, topic_id_list=None):
+def get_thread_list_url(request, course_key, topic_id_list=None, view=None):
     """
     Returns the URL for the thread_list_url field, given a list of topic_ids
     """
     path = reverse("thread-list")
     query_list = (
         [("course_id", unicode(course_key))] +
-        [("topic_id", topic_id) for topic_id in topic_id_list or []]
+        [("topic_id", topic_id) for topic_id in topic_id_list or []] +
+        ([("view", view)] if view else [])
     )
     return request.build_absolute_uri(urlunparse(("", "", path, "", urlencode(query_list), "")))
 
@@ -145,6 +146,7 @@ def get_course(request, course_key):
             for blackout in course.get_discussion_blackout_datetimes()
         ],
         "thread_list_url": get_thread_list_url(request, course_key, topic_id_list=[]),
+        "following_thread_list_url": get_thread_list_url(request, course_key, view="following"),
         "topics_url": request.build_absolute_uri(
             reverse("course_topics", kwargs={"course_id": course_key})
         )
@@ -223,7 +225,7 @@ def get_course_topics(request, course_key):
     }
 
 
-def get_thread_list(request, course_key, page, page_size, topic_id_list=None):
+def get_thread_list(request, course_key, page, page_size, topic_id_list=None, view=None):
     """
     Return the list of all discussion threads pertaining to the given course
 
@@ -234,6 +236,7 @@ def get_thread_list(request, course_key, page, page_size, topic_id_list=None):
     page: The page number (1-indexed) to retrieve
     page_size: The number of threads to retrieve per page
     topic_id_list: The list of topic_ids to get the discussion threads for
+    view: One of "following", "unread", or "unanswered" to retrieve such threads
 
     Returns:
 
@@ -242,9 +245,7 @@ def get_thread_list(request, course_key, page, page_size, topic_id_list=None):
     """
     course = _get_course_or_404(course_key, request.user)
     context = get_context(course, request)
-    topic_ids_csv = ",".join(topic_id_list) if topic_id_list else None
-    threads, result_page, num_pages, _ = Thread.search({
-        "course_id": unicode(course.id),
+    query_params = {
         "group_id": (
             None if context["is_requester_privileged"] else
             get_cohort_id(request.user, course.id)
@@ -253,8 +254,13 @@ def get_thread_list(request, course_key, page, page_size, topic_id_list=None):
         "sort_order": "desc",
         "page": page,
         "per_page": page_size,
-        "commentable_ids": topic_ids_csv,
-    })
+    }
+    if view == "following":
+        threads, result_page, num_pages = context["cc_requester"].subscribed_threads(query_params)
+    else:
+        query_params["course_id"] = unicode(course.id)
+        query_params["commentable_ids"] = ",".join(topic_id_list) if topic_id_list else None
+        threads, result_page, num_pages, _ = Thread.search(query_params)
     # The comments service returns the last page of results if the requested
     # page is beyond the last page, but we want be consistent with DRF's general
     # behavior and return a 404 in that case

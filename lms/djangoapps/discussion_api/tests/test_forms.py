@@ -90,6 +90,7 @@ class ThreadListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
                 "page": 2,
                 "page_size": 13,
                 "topic_id": ["example topic_id", "example 2nd topic_id"],
+                "view": "",
             }
         )
 
@@ -104,6 +105,17 @@ class ThreadListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
     def test_empty_topic_id(self):
         self.form_data.setlist("topic_id", ["", "not empty"])
         self.assert_error("topic_id", "This field cannot be empty.")
+
+    def test_view(self):
+        self.form_data["view"] = "following"
+        self.assert_field_value("view", "following")
+
+    def test_invalid_view(self):
+        self.form_data["view"] = "invalid_view"
+        self.assert_error(
+            "view",
+            "Select a valid choice. invalid_view is not one of the available choices."
+        )
 
 
 class CommentListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
